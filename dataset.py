@@ -70,6 +70,9 @@ class CellDataModule(lightning.LightningDataModule):
                 root_dir=self.root_dir,
                 split="validation",
             )
+            print(
+                f"DATASET_LENGTH: train: {len(self.train_data)}, validation: {len(self.validation_data)}"
+            )
 
     def train_dataloader(self):
         return DataLoader(
