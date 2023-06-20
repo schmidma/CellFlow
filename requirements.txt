@@ -5,4 +5,3 @@ torch
 torchvision
 albumentations
 tqdm
-acvl_utils

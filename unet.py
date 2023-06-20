@@ -1,16 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 import lightning
 import torch.nn.functional as F
-import cv2
-import tifffile
-import os
 from torchmetrics.classification import JaccardIndex as IoU
-from acvl_utils.instance_segmentation.instance_as_semantic_seg import (
-    convert_semantic_to_instanceseg_mp,
-)
 
 
 class ResidualBlock(nn.Module):
@@ -119,42 +112,6 @@ class UNet(lightning.LightningModule):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
         return [optimizer], [scheduler]
-
-    def predict_instance_segmentation_from_border_core(
-        self, dataloader, pred_dir="./preds"
-    ):
-        self.eval()
-        with torch.no_grad():
-            for batch, _, _, file_name in dataloader:
-                # Pass the input tensor through the network to obtain the predicted output tensor
-                pred = torch.argmax(self(batch), 1)
-
-                for i in range(pred.shape[0]):
-                    # convert to instance segmentation
-                    instance_segmentation = convert_semantic_to_instanceseg_mp(
-                        np.array(pred[i].unsqueeze(0)).astype(np.uint8),
-                        spacing=(1, 1, 1),
-                        num_processes=12,
-                        isolated_border_as_separate_instance_threshold=15,
-                        small_center_threshold=30,
-                    ).squeeze()
-
-                    # resize to size 256x256
-                    resized_instance_segmentation = cv2.resize(
-                        instance_segmentation.astype(np.float32),
-                        (256, 256),
-                        interpolation=cv2.INTER_NEAREST,
-                    )
-                    # save file
-                    save_dir, save_name = (
-                        os.path.join(pred_dir, file_name[i].split("/")[0]),
-                        file_name[i].split("/")[1],
-                    )
-                    os.makedirs(save_dir, exist_ok=True)
-                    tifffile.imwrite(
-                        os.path.join(save_dir, save_name.replace(".tif", "_256.tif")),
-                        resized_instance_segmentation.astype(np.uint64),
-                    )
 
 
 if __name__ == "__main__":
