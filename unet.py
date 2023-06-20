@@ -81,7 +81,6 @@ class UNet(lightning.LightningModule):
     def _shared_evaluation_step(self, batch):
         images, target_masks, target_flow_gradients = batch
         assert target_flow_gradients.shape[1] == 2
-        assert target_masks.shape == images.shape
         outputs = self(images)
         logits = outputs[:, 0, ...]
         predicted_flow_gradients = outputs[:, 1:, ...]
@@ -98,15 +97,15 @@ class UNet(lightning.LightningModule):
 
     def training_step(self, batch, batch_idx):
         total_loss, _ = self._shared_evaluation_step(batch)
-        self.log("train_loss", total_loss)
+        self.log("train/loss", total_loss, prog_bar=True)
         return total_loss
 
     def validation_step(self, batch, batch_idx):
         _, target_masks, _ = batch
         total_loss, predicted_object_probabilities = self._shared_evaluation_step(batch)
         iou = self.iou(predicted_object_probabilities > 0.5, target_masks)
-        self.log("val_loss", total_loss, prog_bar=True)
-        self.log("val_iou", iou, prog_bar=True)
+        self.log("validation/loss", total_loss, prog_bar=True)
+        self.log("validation/iou", iou, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
