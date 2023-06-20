@@ -73,6 +73,12 @@ class CellDataModule(lightning.LightningDataModule):
             print(
                 f"DATASET_LENGTH: train: {len(self.train_data)}, validation: {len(self.validation_data)}"
             )
+        elif stage == "test" or stage is None:
+            self.test_data = CellDataset(
+                root_dir=self.root_dir,
+                split="test",
+            )
+            print(f"DATASET_LENGTH: test: {len(self.test_data)}")
 
     def train_dataloader(self):
         return DataLoader(
@@ -85,6 +91,13 @@ class CellDataModule(lightning.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.validation_data,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_data,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
