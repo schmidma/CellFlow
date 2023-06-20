@@ -4,6 +4,7 @@ from pathlib import Path
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
+import torch
 
 from dataset import CellDataModule
 from unet import UNet
@@ -12,6 +13,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", type=Path, required=True)
     arguments = parser.parse_args()
+
+    torch.set_float32_matmul_precision("medium")
 
     study_name = "unet"
     model = UNet()
