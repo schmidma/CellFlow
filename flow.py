@@ -1,14 +1,10 @@
 from pathlib import Path
 from multiprocessing import Pool
+import argparse
 
 import numpy as np
 from scipy.signal import convolve2d
 import tifffile
-from tqdm import tqdm
-import multiprocessing
-
-
-ROOT_DIR = Path("/hkfs/work/workspace/scratch/hgf_pdv3669-H3/train/")
 
 
 def simulate_heat_diffusion(indices, heat_center):
@@ -28,69 +24,59 @@ def simulate_heat_diffusion(indices, heat_center):
         ]
 
     gradients = np.gradient(heat_map)
-    dx = gradients[0]
-    dy = gradients[1]
-    return np.stack([dx, dy], axis=0), heat_indices
+    dy = gradients[0]
+    dx = gradients[1]
+    return np.stack([dy, dx], axis=-1), heat_indices
 
 
 def normalize_gradients(gradients):
-    norms = np.linalg.norm(gradients, axis=0)
-    gradients[:, norms != 0] /= norms[np.newaxis, norms != 0]
+    norms = np.linalg.norm(gradients, axis=-1)
+    gradients[norms != 0] /= norms[norms != 0, np.newaxis]
 
 
 def compute_gradient_mask(mask_path):
     mask = tifffile.imread(mask_path)
+    print(f"running {mask_path.name}")
     ids = np.unique(mask)
-    mask_gradients = np.zeros((2, mask.shape[0], mask.shape[1]))
+    image_height, image_width = mask.shape
+    mask_gradients = np.zeros((image_height, image_width, 2))
 
-    progress = tqdm(
-        ids[ids != 0],
-        desc="Simulate per ID",
-        leave=False,
-        position=multiprocessing.current_process()._identity[0],
-    )
-    for id in progress:
-        progress.set_postfix_str(f"ID: {id}")
+    for id in ids[ids != 0]:
         indices = np.argwhere(mask == id)
-        if len(indices) < 9:
-            progress.write(
-                f"In {mask_path.name}: skipping ID {id} with {len(indices)} pixels"
-            )
-            continue
         median = np.median(indices, axis=0)
         distances = np.sum((indices - median) ** 2, axis=1)
         center = indices[np.argmin(distances)]
 
         result = simulate_heat_diffusion(indices, center)
         if result is None:
-            progress.write(f"In {mask_path.name}: skipping ID {id} not large enough")
+            print(f"{mask_path.name}: skipping ID {id} not large enough")
             continue
         gradients, heat_indices = result
         normalize_gradients(gradients)
 
-        mask_gradients[:, indices[:, 0], indices[:, 1]] = gradients[
-            :, heat_indices[:, 0], heat_indices[:, 1]
+        mask_gradients[indices[:, 0], indices[:, 1]] = gradients[
+            heat_indices[:, 0], heat_indices[:, 1]
         ]
     return mask_gradients
 
 
 def compute_gradient_masks(mask_path):
-    gradients_file_name = mask_path.stem.split("_")[1] + "_gradients.tif"
-    gradients_path = mask_path.parent / gradients_file_name
+    gradients_path = (
+        mask_path.parent
+        / f"../{mask_path.parent.name.split('_')[0]}_flow/{mask_path.stem}_flow.tif"
+    )
     if gradients_path.exists():
-        tqdm.write(f"Skipping {mask_path.name}")
+        print(f"skipping existing {mask_path.name}")
         return
 
     mask_gradients = compute_gradient_mask(mask_path)
-    tifffile.imwrite(gradients_path, mask_gradients)
+    tifffile.imwrite(gradients_path, mask_gradients, compression="lzw")
 
 
 if __name__ == "__main__":
-    mask_files = sorted(list(ROOT_DIR.glob(r"[abc]" + "_GT/man_*.tif")))
-    # progress = tqdm(mask_files, desc="Mask Files")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root_dir", type=Path, required=True)
+    arguments = parser.parse_args()
+    mask_files = sorted(list(arguments.root_dir.glob(r"[abc]" + "_GT/man_*.tif")))
     with Pool(15) as p:
-        for _ in tqdm(
-            p.imap_unordered(compute_gradient_masks, mask_files),
-            total=len(mask_files),
-        ):
-            pass
+        p.map(compute_gradient_masks, mask_files)
