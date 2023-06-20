@@ -16,5 +16,5 @@ export OMP_NUM_THREADS=1
 group_workspace=/hkfs/work/workspace/scratch/hgf_pdv3669-H3
 
 source ${group_workspace}/venv/bin/activate
-python ${group_workspace}/CharmingSyringes/train.py --root-dir ${group_workspace}/
+python ${group_workspace}/CharmingSyringes/train.py --root_dir ${group_workspace}/
 
