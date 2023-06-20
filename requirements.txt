@@ -1,0 +1,6 @@
+tifffile
+imagecodecs
+lightning
+torch
+torchvision
+albumentations
