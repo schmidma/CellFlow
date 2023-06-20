@@ -4,3 +4,4 @@ lightning
 torch
 torchvision
 albumentations
+tqdm
