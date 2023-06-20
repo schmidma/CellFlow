@@ -54,7 +54,7 @@ class CellDataset(Dataset):
 
 
 class CellDataModule(lightning.LightningDataModule):
-    def __init__(self, root_dir, batch_size=16, num_workers=32):
+    def __init__(self, root_dir, batch_size=16, num_workers=152):
         super().__init__()
         self.root_dir = root_dir
         self.batch_size = batch_size
