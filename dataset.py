@@ -10,9 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class CellDataset(Dataset):
-    def __init__(self, root_dir, split="train", transform=None):
-        self.transform = transform
-
+    def __init__(self, root_dir, split="train"):
         root_dir = Path(root_dir)
         if split == "train":
             self.image_files = sorted(list(root_dir.glob(r"[ab]" + "/*.tif")))
@@ -28,6 +26,16 @@ class CellDataset(Dataset):
             self.image_files = sorted(list(root_dir.glob(r"[de]" + "/*.tif")))
             self.flow_gradient_files = None
 
+        self.image_transform = albumentations.Compose(
+            [
+                albumentations.Normalize(
+                    mean=33.53029578908284 / 255,
+                    std=23.36764441145509 / 255,
+                ),
+                ToTensorV2(),
+            ]
+        )
+
     def __getitem__(self, idx):
         image = tifffile.imread(self.image_files[idx])
         if self.flow_gradient_files:
@@ -37,8 +45,7 @@ class CellDataset(Dataset):
         else:
             flow_gradient = torch.zeros((2, image.shape[0], image.shape[1]))
 
-        if self.transform is not None:
-            image = self.transform(image=image)["image"]
+        image = self.image_transform(image=image)["image"]
         mask = torch.sum(flow_gradient**2, axis=0) != 0
         return image, mask, flow_gradient
 
@@ -46,41 +53,8 @@ class CellDataset(Dataset):
         return len(self.image_files)
 
 
-def train_transform():
-    transform = albumentations.Compose(
-        [
-            # albumentations.Resize(512, 512, interpolation=cv2.INTER_NEAREST),
-            # albumentations.HorizontalFlip(p=0.5),
-            # albumentations.VerticalFlip(p=0.5),
-            # albumentations.RandomBrightnessContrast(p=0.2),
-            albumentations.Normalize(
-                mean=33.53029578908284 / 255,
-                std=23.36764441145509 / 255,
-            ),
-            ToTensorV2(),
-        ]
-    )
-
-    return transform
-
-
-def val_transform():
-    transform = albumentations.Compose(
-        [
-            # albumentations.Resize(512, 512, interpolation=cv2.INTER_NEAREST),
-            albumentations.Normalize(
-                mean=33.53029578908284 / 255,
-                std=23.36764441145509 / 255,
-            ),
-            ToTensorV2(),
-        ]
-    )
-
-    return transform
-
-
 class CellDataModule(lightning.LightningDataModule):
-    def __init__(self, batch_size=2, num_workers=4):
+    def __init__(self, batch_size=16, num_workers=40):
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -90,12 +64,10 @@ class CellDataModule(lightning.LightningDataModule):
             self.train_data = CellDataset(
                 root_dir="../train/",
                 split="train",
-                transform=train_transform(),
             )
             self.validation_data = CellDataset(
                 root_dir="../train/",
                 split="validation",
-                transform=val_transform(),
             )
 
     def train_dataloader(self):
@@ -115,8 +87,6 @@ class CellDataModule(lightning.LightningDataModule):
 
 
 if __name__ == "__main__":
-    cell_dataset = CellDataset(
-        root_dir="../train/", split="train", transform=train_transform()
-    )
+    cell_dataset = CellDataset(root_dir="../train/", split="train")
     for image, mask, gradient in DataLoader(cell_dataset):
         print(f"image: {image.shape}, mask: {mask.shape}, gradient: {gradient.shape}")
