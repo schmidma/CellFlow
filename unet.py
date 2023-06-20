@@ -101,15 +101,15 @@ class UNet(lightning.LightningModule):
 
     def training_step(self, batch, batch_idx):
         total_loss, _ = self._shared_evaluation_step(batch)
-        self.log("train/loss", total_loss, prog_bar=True)
+        self.log("train/loss", total_loss, prog_bar=True, sync_dist=True)
         return total_loss
 
     def validation_step(self, batch, batch_idx):
         _, target_masks, _ = batch
         total_loss, predicted_object_probabilities = self._shared_evaluation_step(batch)
         iou = self.iou(predicted_object_probabilities > 0.5, target_masks)
-        self.log("validation/loss", total_loss, prog_bar=True)
-        self.log("validation/iou", iou, prog_bar=True)
+        self.log("validation/loss", total_loss, prog_bar=True, sync_dist=True)
+        self.log("validation/iou", iou, prog_bar=True, sync_dist=True)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
