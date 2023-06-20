@@ -54,19 +54,20 @@ class CellDataset(Dataset):
 
 
 class CellDataModule(lightning.LightningDataModule):
-    def __init__(self, batch_size=16, num_workers=40):
+    def __init__(self, root_dir, batch_size=16, num_workers=40):
         super().__init__()
+        self.root_dir = root_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
 
     def setup(self, stage=None):
         if stage == "fit" or stage is None:
             self.train_data = CellDataset(
-                root_dir="../train/",
+                root_dir=self.root_dir,
                 split="train",
             )
             self.validation_data = CellDataset(
-                root_dir="../train/",
+                root_dir=self.root_dir,
                 split="validation",
             )
 
