@@ -30,6 +30,8 @@ if __name__ == "__main__":
     )
 
     trainer = Trainer(
+        accelerator="gpu",
+        devices=4,
         max_epochs=10,
         callbacks=[checkpoint_callback],
         logger=tensorboard_logger,
