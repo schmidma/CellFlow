@@ -41,7 +41,11 @@ class UpResidualBlock(nn.Module):
 
 class UNet(lightning.LightningModule):
     def __init__(
-        self, in_channels=1, out_channels=3, init_features=32, learning_rate=1e-3
+        self,
+        in_channels=1,
+        out_channels=3,
+        init_features=32,
+        learning_rate=1e-3,
     ):
         super(UNet, self).__init__()
         self.in_channels = in_channels
