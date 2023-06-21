@@ -7,9 +7,22 @@ import lightning
 import os
 import tifffile
 import cv2
+from torch.nn.functional import sigmoid
+from postprocessing import apply_flow, cluster
 
 from dataset import CellDataModule
 from unet import UNet
+
+
+def gradients_to_instances(prediction, class_threshold=0.5):
+    # batch, channels, height, width
+    logits = prediction[:, 0, :, :]
+    flow = prediction[:, [1, 2], :, :]
+    positions = apply_flow(flow)
+    probability = sigmoid(logits)
+    mask = probability > class_threshold
+    ids = cluster(positions, mask)
+    return ids
 
 
 if __name__ == "__main__":
@@ -24,14 +37,11 @@ if __name__ == "__main__":
     trainer = lightning.Trainer(accelerator="gpu", devices=4)
 
     with torch.no_grad():
-        instances, filenames = trainer.predict(model, data)
-        for instance, filename in zip(instances, filenames):
+        predictions = trainer.predict(model, data)
+        for prediction, filename in predictions:
+            instances = gradients_to_instances(prediction.detach())
             resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
             instance = resize(image=instance.numpy())["image"]
             save_path = arguments.pred_dir / filename
             os.makedirs(save_path.parent, exist_ok=True)
-            tifffile.imwrite(
-                save_path,
-                instance,
-                compression="lzw"
-            )
+            tifffile.imwrite(save_path, instance, compression="lzw")

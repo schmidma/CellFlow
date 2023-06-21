@@ -4,19 +4,7 @@ import torch.optim as optim
 import lightning
 import torch.nn.functional as F
 from torchmetrics.classification import JaccardIndex as IoU
-from torch.nn.functional import sigmoid
-from postprocessing import apply_flow, cluster
 
-
-def gradients_to_instances(prediction, class_threshold=0.5):
-    # batch, channels, height, width
-    logits = prediction[:, 0, :, :]
-    flow = prediction[:, [1, 2], :, :]
-    positions = apply_flow(flow)
-    probability = sigmoid(logits)
-    mask = probability > class_threshold
-    ids = cluster(positions, mask)
-    return ids
 
 
 class ResidualBlock(nn.Module):
@@ -128,8 +116,7 @@ class UNet(lightning.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         image, _, _, filenames = batch
         prediction = self(image)
-        instances = gradients_to_instances(prediction)
-        return instances, filenames
+        return prediction, filenames
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
