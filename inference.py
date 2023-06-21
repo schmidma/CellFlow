@@ -6,31 +6,18 @@ from torch.nn.functional import sigmoid
 from torch.utils.data import DataLoader
 
 from dataset import CellDataset
+from postprocessing import apply_flow
 from unet import UNet
 
 
 def gradients_to_instances(prediction, class_threshold=0.5):
     # batch, channels, height, width
     logits = prediction[:, 0, :, :]
-    dx = prediction[:, 1, :, :]
-    dy = prediction[:, 2, :, :]
-    batch_size = logits.shape[0]
-    image_size_x = logits.shape[1]
-    image_size_y = logits.shape[2]
-
+    flow = prediction[:, [1, 2], :, :]
+    positions = apply_flow(flow)
     probability = sigmoid(logits)
-    foreground = probability > class_threshold
-    positions = (
-        torch.cartesian_prod(
-            torch.arange(image_size_x),
-            torch.arange(image_size_y),
-        )
-        .reshape(image_size_x, image_size_y, 2)
-        .unsqueeze(0)
-        .repeat(batch_size, 1, 1, 1)
-    )
-    # scatter_add
-    positions.scatter_add(dim=1, index=dx, src=dx)
+    mask = probability > class_threshold
+    
 
 
 if __name__ == "__main__":
