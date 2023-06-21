@@ -3,6 +3,7 @@
 #SBATCH --job-name=AI-HERO_UNet
 #SBATCH --partition=accelerated
 #SBATCH --nodes=1
+#SBATCH --gres=gpu:4
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=38
 #SBATCH --time=01:00:00
