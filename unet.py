@@ -4,6 +4,7 @@ import torch.optim as optim
 import lightning
 import torch.nn.functional as F
 from torchmetrics.classification import JaccardIndex as IoU
+from inference import gradients_to_instances
 
 
 class ResidualBlock(nn.Module):
@@ -111,6 +112,12 @@ class UNet(lightning.LightningModule):
         iou = self.iou(predicted_object_probabilities > 0.5, target_masks)
         self.log("validation/loss", total_loss, prog_bar=True, sync_dist=True)
         self.log("validation/iou", iou, prog_bar=True, sync_dist=True)
+
+    def predict_step(self, batch, batch_idx, dataloader_idx=None):
+        image, _, _, filenames = batch
+        prediction = self(image)
+        instances = gradients_to_instances(prediction)
+        return instances, filenames
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)

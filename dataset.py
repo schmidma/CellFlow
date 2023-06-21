@@ -125,6 +125,13 @@ class CellDataModule(lightning.LightningDataModule):
             num_workers=self.num_workers,
         )
 
+    def predict_dataloader(self):
+        return DataLoader(
+            self.test_data,
+            batch_size=16,
+            num_workers=self.num_workers,
+        )
+
 
 if __name__ == "__main__":
     cell_dataset = CellDataset(root_dir="../train/", split="train")
