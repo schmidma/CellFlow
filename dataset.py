@@ -29,6 +29,7 @@ class CellDataset(Dataset):
         self.image_transform = albumentations.Compose(
             [
                 albumentations.Resize(480, 384),
+                albumentations.RandomBrightnessContrast(),
                 albumentations.Normalize(
                     mean=33.53029578908284 / 255,
                     std=23.36764441145509 / 255,

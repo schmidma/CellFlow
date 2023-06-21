@@ -37,6 +37,7 @@ if __name__ == "__main__":
         devices=4,
         strategy="ddp",
         max_epochs=100,
+        log_every_n_steps=25,
         callbacks=[checkpoint_callback],
         logger=tensorboard_logger,
     )
