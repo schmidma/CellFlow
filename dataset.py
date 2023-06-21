@@ -26,18 +26,30 @@ class CellDataset(Dataset):
             self.image_files = sorted(list(root_dir.glob(r"[de]" + "/*.tif")))
             self.flow_gradient_files = None
 
-        self.image_transform = albumentations.Compose(
-            [
-                albumentations.Resize(480, 384),
-                albumentations.RandomBrightnessContrast(),
-                albumentations.GaussNoise(),
-                albumentations.Normalize(
-                    mean=33.53029578908284 / 255,
-                    std=23.36764441145509 / 255,
-                ),
-                ToTensorV2(),
-            ]
-        )
+        if split == "train":
+            self.image_transform = albumentations.Compose(
+                [
+                    albumentations.Resize(480, 384),
+                    albumentations.RandomBrightnessContrast(),
+                    albumentations.GaussNoise(),
+                    albumentations.Normalize(
+                        mean=33.53029578908284 / 255,
+                        std=23.36764441145509 / 255,
+                    ),
+                    ToTensorV2(),
+                ]
+            )
+        else:
+            self.image_transform = albumentations.Compose(
+                [
+                    albumentations.Resize(480, 384),
+                    albumentations.Normalize(
+                        mean=33.53029578908284 / 255,
+                        std=23.36764441145509 / 255,
+                    ),
+                    ToTensorV2(),
+                ]
+            )
         self.flow_transform = albumentations.Compose(
             [
                 albumentations.Resize(480, 384),
