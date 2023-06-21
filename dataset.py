@@ -30,6 +30,7 @@ class CellDataset(Dataset):
             [
                 albumentations.Resize(480, 384),
                 albumentations.RandomBrightnessContrast(),
+                albumentations.GaussNoise(),
                 albumentations.Normalize(
                     mean=33.53029578908284 / 255,
                     std=23.36764441145509 / 255,
