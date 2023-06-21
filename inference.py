@@ -35,16 +35,17 @@ if __name__ == "__main__":
     model = UNet.load_from_checkpoint(arguments.from_checkpoint, map_location="cpu")
     data = CellDataset(root_dir=arguments.root_dir, split=arguments.split)
 
-    for batch in DataLoader(data, batch_size=16):
-        image, _, _, filenames = batch
-        prediction = model(image)
-        instances = gradients_to_instances(prediction)
-        print(f"instances.shape: {instances.shape}")
-        for instance, filename in zip(instances, filenames):
-            resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
-            instance = resize(image=instance.numpy())["image"]
-            tifffile.imwrite(
-                arguments.pred_dir / filename,
-                instance,
-                compression="lzw"
-            )
+    with torch.no_grad():
+        for batch in DataLoader(data, batch_size=16):
+            image, _, _, filenames = batch
+            prediction = model(image)
+            instances = gradients_to_instances(prediction)
+            print(f"instances.shape: {instances.shape}")
+            for instance, filename in zip(instances, filenames):
+                resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
+                instance = resize(image=instance.numpy())["image"]
+                tifffile.imwrite(
+                    arguments.pred_dir / filename,
+                    instance,
+                    compression="lzw"
+                )
