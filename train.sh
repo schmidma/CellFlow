@@ -11,7 +11,7 @@
 
 export CUDA_CACHE_DISABLE=1
 export OMP_NUM_THREADS=1
-export NCCL_DEBUG=INFO
+#export NCCL_DEBUG=INFO
 
 group_workspace=/hkfs/work/workspace/scratch/hgf_pdv3669-H3
 

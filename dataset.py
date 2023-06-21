@@ -42,6 +42,7 @@ class CellDataset(Dataset):
             flow_gradient = torch.tensor(
                 tifffile.imread(self.flow_gradient_files[idx]).astype(np.float32)
             )
+            flow_gradient = flow_gradient.permute(2, 0, 1)  # from HWC to CHW
         else:
             flow_gradient = torch.zeros((2, image.shape[0], image.shape[1]))
 
