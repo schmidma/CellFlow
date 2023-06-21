@@ -13,9 +13,9 @@ class CellDataset(Dataset):
     def __init__(self, root_dir, split="train"):
         root_dir = Path(root_dir)
         if split == "train":
-            self.image_files = sorted(list(root_dir.glob(r"[ab]" + "/*.tif")))
+            self.image_files = sorted(list(root_dir.glob(r"[abc]" + "/*.tif")))
             self.flow_gradient_files = sorted(
-                list(root_dir.glob(r"[ab]" + "_flow/*.tif"))
+                list(root_dir.glob(r"[abc]" + "_flow/*.tif"))
             )
         elif split == "validation":
             self.image_files = sorted(list(root_dir.glob(r"[c]" + "/*.tif")))
