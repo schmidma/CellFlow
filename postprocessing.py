@@ -15,7 +15,7 @@ def apply_flow(flow, n_steps=200):
         .reshape(image_height, image_width, 2)
         .unsqueeze(0)
         .repeat(batch_size, 1, 1, 1)
-    ).double()
+    ).float()
 
     positions /= (
         torch.tensor([image_height, image_width]).double().unsqueeze(0).unsqueeze(0)
@@ -38,7 +38,26 @@ def apply_flow(flow, n_steps=200):
 
     positions = (positions + 1) / 2
     positions *= (
-        torch.tensor([image_height, image_width]).double().unsqueeze(0).unsqueeze(0)
+        torch.tensor([image_height, image_width]).float().unsqueeze(0).unsqueeze(0)
     )
 
     return positions
+
+def cluster(positions, is_foreground, max_threshold=10):
+    batch_size, image_height, image_width, _ = positions.shape
+
+    ids = torch.zeros((batch_size, image_height, image_width), dtype=torch.long)
+    for i in range(batch_size):
+        masked_points = positions[i][is_foreground[i]]
+        reshaped_positions = positions[i].reshape(-1, 2)
+        bin_y = torch.arange(-0.5, image_height + 0.5, 1, dtype=torch.float)
+        bin_x = torch.arange(-0.5, image_width + 0.5, 1, dtype=torch.float)
+        hist, _ = torch.histogramdd(reshaped_positions, (bin_y, bin_x))
+        max_hist = hist > max_threshold
+        max_indices = max_hist.nonzero()
+        distances = torch.sum(
+            (masked_points.unsqueeze(1) - max_indices.unsqueeze(0)) ** 2, axis=2
+        )
+        best_cluster_index = torch.argmin(distances, axis=1)
+        ids[i][is_foreground[i]] = best_cluster_index
+    return ids

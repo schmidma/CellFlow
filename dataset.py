@@ -58,7 +58,8 @@ class CellDataset(Dataset):
         )
 
     def __getitem__(self, idx):
-        image = tifffile.imread(self.image_files[idx])
+        image_path = self.image_files[idx]
+        image = tifffile.imread(image_path)
         if self.flow_gradient_files:
             flow_gradient = tifffile.imread(self.flow_gradient_files[idx])
             flow_gradient = self.flow_transform(image=flow_gradient)["image"]
@@ -68,7 +69,7 @@ class CellDataset(Dataset):
 
         image = self.image_transform(image=image)["image"]
         mask = torch.sum(flow_gradient**2, axis=0) != 0
-        return image, mask, flow_gradient
+        return image, mask, flow_gradient, image_path.name
 
     def __len__(self):
         return len(self.image_files)

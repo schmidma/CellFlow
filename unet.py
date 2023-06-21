@@ -84,7 +84,7 @@ class UNet(lightning.LightningModule):
         return out
 
     def _shared_evaluation_step(self, batch):
-        images, target_masks, target_flow_gradients = batch
+        images, target_masks, target_flow_gradients, _ = batch
         assert target_flow_gradients.shape[1] == 2
         outputs = self(images)
         logits = outputs[:, 0, ...]
