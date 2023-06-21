@@ -38,10 +38,11 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         predictions = trainer.predict(model, data)
-        for prediction, filename in predictions:
-            instances = gradients_to_instances(prediction.detach())
+        for prediction_batch, filename_batch in predictions:
+            instances = gradients_to_instances(prediction_batch.detach())
             resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
-            instance = resize(image=instance.numpy())["image"]
-            save_path = arguments.pred_dir / filename
-            os.makedirs(save_path.parent, exist_ok=True)
-            tifffile.imwrite(save_path, instance, compression="lzw")
+            for instance, filename in zip(instances, filename_batch):
+                instance = resize(image=instance.numpy())["image"]
+                save_path = arguments.pred_dir / filename
+                os.makedirs(save_path.parent, exist_ok=True)
+                tifffile.imwrite(save_path, instance, compression="lzw")
