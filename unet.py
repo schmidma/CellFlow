@@ -106,7 +106,7 @@ class UNet(lightning.LightningModule):
         return total_loss
 
     def validation_step(self, batch, batch_idx):
-        _, target_masks, _ = batch
+        _, target_masks, _, _ = batch
         total_loss, predicted_object_probabilities = self._shared_evaluation_step(batch)
         iou = self.iou(predicted_object_probabilities > 0.5, target_masks)
         self.log("validation/loss", total_loss, prog_bar=True, sync_dist=True)
