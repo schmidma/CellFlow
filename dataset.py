@@ -48,6 +48,7 @@ class CellDataset(Dataset):
         if self.flow_gradient_files:
             flow_gradient = tifffile.imread(self.flow_gradient_files[idx])
             flow_gradient = self.flow_transform(image=flow_gradient)["image"]
+            flow_gradient = flow_gradient.type(torch.float32)
         else:
             flow_gradient = torch.zeros((2, image.shape[0], image.shape[1]))
 
