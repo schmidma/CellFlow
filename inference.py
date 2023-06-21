@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 import albumentations
 import os
+from multiprocessing import Pool
 import tifffile
 import cv2
 from torch.nn.functional import sigmoid
@@ -24,6 +25,21 @@ def gradients_to_instances(prediction, class_threshold=0.5):
     ids = cluster(positions, mask)
     return ids
 
+def infer_batch(batch):
+    image, _, _, filenames = batch
+    prediction = model(image)
+    instances = gradients_to_instances(prediction)
+    print(f"instances.shape: {instances.shape}")
+    for instance, filename in zip(instances, filenames):
+        resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
+        instance = resize(image=instance.numpy())["image"]
+        save_path = arguments.pred_dir / filename
+        os.makedirs(save_path.parent, exist_ok=True)
+        tifffile.imwrite(
+            save_path,
+            instance,
+            compression="lzw"
+        )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -35,20 +51,8 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     model = UNet.load_from_checkpoint(arguments.from_checkpoint, map_location="cpu")
     data = CellDataset(root_dir=arguments.root_dir, split=arguments.split)
+    pool = Pool(32)
 
     with torch.no_grad():
-        for batch in DataLoader(data, batch_size=16):
-            image, _, _, filenames = batch
-            prediction = model(image)
-            instances = gradients_to_instances(prediction)
-            print(f"instances.shape: {instances.shape}")
-            for instance, filename in zip(instances, filenames):
-                resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
-                instance = resize(image=instance.numpy())["image"]
-                save_path = arguments.pred_dir / filename
-                os.makedirs(save_path.parent, exist_ok=True)
-                tifffile.imwrite(
-                    save_path,
-                    instance,
-                    compression="lzw"
-                )
+        dataloader = DataLoader(data, batch_size=16, num_workers=16)
+        pool.map(infer_batch, dataloader)
