@@ -96,7 +96,7 @@ class CellDataModule(lightning.LightningDataModule):
             print(
                 f"DATASET_LENGTH: train: {len(self.train_data)}, validation: {len(self.validation_data)}"
             )
-        elif stage == "test" or stage is None:
+        elif stage == "test" or stage == "predict" or stage is None:
             self.test_data = CellDataset(
                 root_dir=self.root_dir,
                 split="test",
