@@ -21,7 +21,7 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     model = UNet.load_from_checkpoint(arguments.from_checkpoint)
     data = CellDataModule(root_dir=arguments.root_dir)
-    trainer = lightning.Trainer(gpus=4)
+    trainer = lightning.Trainer(accelerator="gpu", devices=4)
 
     with torch.no_grad():
         instances, filenames = trainer.predict(model, data)
