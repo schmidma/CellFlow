@@ -4,7 +4,7 @@
 #SBATCH --partition=cpuonly
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=152
 #SBATCH --time=01:00:00
 #SBATCH --output=/hkfs/work/workspace/scratch/hgf_pdv3669-H3/inference.txt
 
