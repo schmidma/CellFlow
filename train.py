@@ -17,7 +17,7 @@ if __name__ == "__main__":
     torch.set_float32_matmul_precision("medium")
 
     study_name = "unet"
-    model = UNet()
+    model = UNet(learning_rate=1e-2)
     data = CellDataModule(root_dir=arguments.root_dir / "train")
     objective_metric = "validation/iou"
     checkpoint_callback = ModelCheckpoint(
