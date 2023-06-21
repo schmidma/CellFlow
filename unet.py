@@ -48,6 +48,7 @@ class UNet(lightning.LightningModule):
         learning_rate=1e-3,
     ):
         super(UNet, self).__init__()
+        self.save_hyperparameters()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.init_features = init_features
