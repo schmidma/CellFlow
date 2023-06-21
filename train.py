@@ -17,7 +17,7 @@ if __name__ == "__main__":
     torch.set_float32_matmul_precision("medium")
 
     study_name = "unet"
-    model = UNet(learning_rate=1e-1)
+    model = UNet(learning_rate=1e-2)
     data = CellDataModule(root_dir=arguments.root_dir / "train")
     objective_metric = "validation/iou"
     checkpoint_callback = ModelCheckpoint(
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         accelerator="gpu",
         devices=4,
         strategy="ddp",
-        max_epochs=10,
+        max_epochs=100,
         callbacks=[checkpoint_callback],
         logger=tensorboard_logger,
     )

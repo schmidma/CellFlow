@@ -28,6 +28,7 @@ class CellDataset(Dataset):
 
         self.image_transform = albumentations.Compose(
             [
+                albumentations.Resize(480, 384),
                 albumentations.Normalize(
                     mean=33.53029578908284 / 255,
                     std=23.36764441145509 / 255,
@@ -35,14 +36,18 @@ class CellDataset(Dataset):
                 ToTensorV2(),
             ]
         )
+        self.flow_transform = albumentations.Compose(
+            [
+                albumentations.Resize(480, 384),
+                ToTensorV2(),
+            ]
+        )
 
     def __getitem__(self, idx):
         image = tifffile.imread(self.image_files[idx])
         if self.flow_gradient_files:
-            flow_gradient = torch.tensor(
-                tifffile.imread(self.flow_gradient_files[idx]).astype(np.float32)
-            )
-            flow_gradient = flow_gradient.permute(2, 0, 1)  # from HWC to CHW
+            flow_gradient = tifffile.imread(self.flow_gradient_files[idx])
+            flow_gradient = self.flow_transform(image=flow_gradient)["image"]
         else:
             flow_gradient = torch.zeros((2, image.shape[0], image.shape[1]))
 

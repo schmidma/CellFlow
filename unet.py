@@ -114,7 +114,7 @@ class UNet(lightning.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=80)
         return [optimizer], [scheduler]
 
 
