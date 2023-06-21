@@ -3,6 +3,7 @@ from pathlib import Path
 
 import torch
 import albumentations
+import os
 import tifffile
 import cv2
 from torch.nn.functional import sigmoid
@@ -44,8 +45,10 @@ if __name__ == "__main__":
             for instance, filename in zip(instances, filenames):
                 resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
                 instance = resize(image=instance.numpy())["image"]
+                save_path = arguments.pred_dir / filename
+                os.makedirs(save_path.parent, exist_ok=True)
                 tifffile.imwrite(
-                    arguments.pred_dir / filename,
+                    save_path,
                     instance,
                     compression="lzw"
                 )

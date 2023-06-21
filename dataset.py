@@ -69,7 +69,8 @@ class CellDataset(Dataset):
 
         image = self.image_transform(image=image)["image"]
         mask = torch.sum(flow_gradient**2, axis=0) != 0
-        return image, mask, flow_gradient, image_path.name
+        file_name = "/".join(str(image_path).split("/")[-2:])
+        return image, mask, flow_gradient, file_name
 
     def __len__(self):
         return len(self.image_files)
