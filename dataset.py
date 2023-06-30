@@ -63,6 +63,7 @@ class CellDataset(Dataset):
 
         flow = compute_flow(segmentation)
 
+        # TODO: this is not very pretty
         transformed = ToTensorV2()(image=image, mask=segmentation)
         image = transformed["image"]
         segmentation = transformed["mask"]
