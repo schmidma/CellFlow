@@ -3,8 +3,10 @@ from pathlib import Path
 import albumentations
 from albumentations.pytorch.transforms import ToTensorV2
 import lightning
+import numpy as np
 import tifffile
-from torch.utils.data import Dataset, DataLoader
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 from flow import compute_flow
 
@@ -13,17 +15,16 @@ class CellDataset(Dataset):
     def __init__(self, root_dir, split="train"):
         root_dir = Path(root_dir)
         if split == "train":
-            runs = "[00|01]"
+            runs = "0[0|1]"
         elif split == "validation":
-            runs = "[02]"
+            runs = "0[2]"
         elif split == "test":
-            runs = "[03|04]"
+            runs = "0[3|4]"
         else:
             raise ValueError(f"Invalid split: {split}")
 
-        self.image_files = sorted(list(root_dir.glob(f"{runs}" + "/*.tif")))
-        self.segmentation_files = sorted(list(root_dir.glob(f"{runs}" + "_GT/*.tif")))
-        self.flow_files = sorted(list(root_dir.glob(f"{runs}" + "_flow/*.tif")))
+        self.image_files = sorted(list(root_dir.glob(f"{runs}/*.tif")))
+        self.segmentation_files = sorted(list(root_dir.glob(f"{runs}_GT/SEG/*.tif")))
 
         # TODO: move transform to optional parameter
         if split == "train":
@@ -36,7 +37,6 @@ class CellDataset(Dataset):
                         mean=33.53029578908284 / 255,
                         std=23.36764441145509 / 255,
                     ),
-                    ToTensorV2(),
                 ]
             )
         else:
@@ -47,7 +47,6 @@ class CellDataset(Dataset):
                         mean=33.53029578908284 / 255,
                         std=23.36764441145509 / 255,
                     ),
-                    ToTensorV2(),
                 ]
             )
 
@@ -56,13 +55,18 @@ class CellDataset(Dataset):
         image = tifffile.imread(image_path)
 
         segmentation_path = self.segmentation_files[idx]
-        segmentation = tifffile.imread(segmentation_path)
+        segmentation = tifffile.imread(segmentation_path).astype(np.int32)
 
         transformed = self.transform(image=image, mask=segmentation)
         image = transformed["image"]
         segmentation = transformed["mask"]
 
         flow = compute_flow(segmentation)
+
+        transformed = ToTensorV2()(image=image, mask=segmentation)
+        image = transformed["image"]
+        segmentation = transformed["mask"]
+        flow = ToTensorV2()(image=flow)["image"]
 
         is_foreground = segmentation != 0
 

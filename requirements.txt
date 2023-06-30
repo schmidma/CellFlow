@@ -4,4 +4,4 @@ lightning
 torch
 torchvision
 albumentations
-tqdm
+tensorboard

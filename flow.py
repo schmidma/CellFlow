@@ -32,7 +32,7 @@ def normalize_gradients(gradients):
 def compute_flow(mask):
     ids = np.unique(mask)
     image_height, image_width = mask.shape
-    flow = np.zeros((image_height, image_width, 2))
+    flow = np.zeros((image_height, image_width, 2), dtype=np.float32)
 
     for id in ids[ids != 0]:
         indices = np.argwhere(mask == id)

@@ -11,14 +11,14 @@ from unet import UNet
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root_dir", type=Path, required=True, default=Path.cwd())
+    parser.add_argument("--root_dir", type=Path, default=Path.cwd())
     arguments = parser.parse_args()
 
     torch.set_float32_matmul_precision("medium")
 
     study_name = "unet"
     model = UNet(learning_rate=1e-2)
-    data = CellDataModule(root_dir=arguments.root_dir / "data")
+    data = CellDataModule(root_dir=arguments.root_dir / "data", batch_size=1)
 
     objective_metric = "validation/iou"
     checkpoint_callback = ModelCheckpoint(
@@ -34,6 +34,7 @@ if __name__ == "__main__":
     )
 
     trainer = Trainer(
+        fast_dev_run=True,
         max_epochs=5,
         log_every_n_steps=25,
         callbacks=[checkpoint_callback],
