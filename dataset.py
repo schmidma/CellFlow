@@ -2,32 +2,32 @@ from pathlib import Path
 
 import albumentations
 from albumentations.pytorch.transforms import ToTensorV2
-import numpy as np
 import lightning
 import tifffile
-import torch
 from torch.utils.data import Dataset, DataLoader
+
+from flow import compute_flow
 
 
 class CellDataset(Dataset):
     def __init__(self, root_dir, split="train"):
         root_dir = Path(root_dir)
         if split == "train":
-            self.image_files = sorted(list(root_dir.glob(r"[abc]" + "/*.tif")))
-            self.flow_gradient_files = sorted(
-                list(root_dir.glob(r"[abc]" + "_flow/*.tif"))
-            )
+            runs = "[00|01]"
         elif split == "validation":
-            self.image_files = sorted(list(root_dir.glob(r"[c]" + "/*.tif")))
-            self.flow_gradient_files = sorted(
-                list(root_dir.glob(r"[c]" + "_flow/*.tif"))
-            )
+            runs = "[02]"
         elif split == "test":
-            self.image_files = sorted(list(root_dir.glob(r"[de]" + "/*.tif")))
-            self.flow_gradient_files = None
+            runs = "[03|04]"
+        else:
+            raise ValueError(f"Invalid split: {split}")
 
+        self.image_files = sorted(list(root_dir.glob(f"{runs}" + "/*.tif")))
+        self.segmentation_files = sorted(list(root_dir.glob(f"{runs}" + "_GT/*.tif")))
+        self.flow_files = sorted(list(root_dir.glob(f"{runs}" + "_flow/*.tif")))
+
+        # TODO: move transform to optional parameter
         if split == "train":
-            self.image_transform = albumentations.Compose(
+            self.transform = albumentations.Compose(
                 [
                     albumentations.Resize(480, 384),
                     albumentations.RandomBrightnessContrast(),
@@ -40,7 +40,7 @@ class CellDataset(Dataset):
                 ]
             )
         else:
-            self.image_transform = albumentations.Compose(
+            self.transform = albumentations.Compose(
                 [
                     albumentations.Resize(480, 384),
                     albumentations.Normalize(
@@ -50,27 +50,23 @@ class CellDataset(Dataset):
                     ToTensorV2(),
                 ]
             )
-        self.flow_transform = albumentations.Compose(
-            [
-                albumentations.Resize(480, 384),
-                ToTensorV2(),
-            ]
-        )
 
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
         image = tifffile.imread(image_path)
-        if self.flow_gradient_files:
-            flow_gradient = tifffile.imread(self.flow_gradient_files[idx])
-            flow_gradient = self.flow_transform(image=flow_gradient)["image"]
-            flow_gradient = flow_gradient.type(torch.float32)
-        else:
-            flow_gradient = torch.zeros((2, image.shape[0], image.shape[1]))
 
-        image = self.image_transform(image=image)["image"]
-        mask = torch.sum(flow_gradient**2, axis=0) != 0
-        file_name = "/".join(str(image_path).split("/")[-2:])
-        return image, mask, flow_gradient, file_name
+        segmentation_path = self.segmentation_files[idx]
+        segmentation = tifffile.imread(segmentation_path)
+
+        transformed = self.transform(image=image, mask=segmentation)
+        image = transformed["image"]
+        segmentation = transformed["mask"]
+
+        flow = compute_flow(segmentation)
+
+        is_foreground = segmentation != 0
+
+        return image, is_foreground, flow
 
     def __len__(self):
         return len(self.image_files)
@@ -93,15 +89,11 @@ class CellDataModule(lightning.LightningDataModule):
                 root_dir=self.root_dir,
                 split="validation",
             )
-            print(
-                f"DATASET_LENGTH: train: {len(self.train_data)}, validation: {len(self.validation_data)}"
-            )
         elif stage == "test" or stage == "predict" or stage is None:
             self.test_data = CellDataset(
                 root_dir=self.root_dir,
                 split="test",
             )
-            print(f"DATASET_LENGTH: test: {len(self.test_data)}")
 
     def train_dataloader(self):
         return DataLoader(
@@ -128,12 +120,6 @@ class CellDataModule(lightning.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(
             self.test_data,
-            batch_size=16,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
-
-
-if __name__ == "__main__":
-    cell_dataset = CellDataset(root_dir="../train/", split="train")
-    for image, mask, gradient in DataLoader(cell_dataset):
-        print(f"image: {image.shape}, mask: {mask.shape}, gradient: {gradient.shape}")

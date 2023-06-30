@@ -6,10 +6,9 @@ import torch.nn.functional as F
 from torchmetrics.classification import JaccardIndex as IoU
 
 
-
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(ResidualBlock, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
@@ -27,7 +26,7 @@ class ResidualBlock(nn.Module):
 
 class UpResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(UpResidualBlock, self).__init__()
+        super().__init__()
         self.up = nn.ConvTranspose2d(
             in_channels, in_channels // 2, kernel_size=2, stride=2
         )
@@ -48,7 +47,7 @@ class UNet(lightning.LightningModule):
         init_features=32,
         learning_rate=1e-3,
     ):
-        super(UNet, self).__init__()
+        super().__init__()
         self.save_hyperparameters()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -70,7 +69,7 @@ class UNet(lightning.LightningModule):
         self.iou = IoU(task="multiclass", num_classes=3)
 
         # Loss
-        self.binary_cross_entropy_loss = nn.BCELoss()
+        self.binary_cross_entropy_loss = nn.BCEWithLogitsLoss()
         self.mean_squared_error = nn.MSELoss()
 
     def forward(self, x):
@@ -85,18 +84,20 @@ class UNet(lightning.LightningModule):
         return out
 
     def _shared_evaluation_step(self, batch):
-        images, target_masks, target_flow_gradients, _ = batch
-        assert target_flow_gradients.shape[1] == 2
+        images, target_mask, target_flow = batch
+        assert target_flow.shape[1] == 2
+
         outputs = self(images)
         logits = outputs[:, 0, ...]
-        predicted_flow_gradients = outputs[:, 1:, ...]
+        predicted_flow = outputs[:, [1, 2], ...]
         predicted_object_probabilities = F.sigmoid(logits)
+
         classification_loss = self.binary_cross_entropy_loss(
-            predicted_object_probabilities, target_masks.type(torch.float32)
+            logits, target_mask.type(torch.float32)
         )
         flow_gradient_loss = self.mean_squared_error(
-            torch.masked_select(target_flow_gradients, target_masks.unsqueeze(1)),
-            torch.masked_select(predicted_flow_gradients, target_masks.unsqueeze(1)),
+            torch.masked_select(target_flow, target_mask.unsqueeze(1)),
+            torch.masked_select(predicted_flow, target_mask.unsqueeze(1)),
         )
         total_loss = classification_loss + flow_gradient_loss
         return total_loss, predicted_object_probabilities
@@ -121,16 +122,7 @@ class UNet(lightning.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
-        return [optimizer], [scheduler]
-
-
-if __name__ == "__main__":
-    images = torch.zeros((1, 1, 960, 768))
-    masks = torch.zeros((1, 960, 768), dtype=torch.bool)
-    masks[0, 0, 0] = True
-    flow_gradients = torch.zeros((1, 2, 960, 768))
-    batch = (images, masks, flow_gradients)
-    unet = UNet()
-
-    print(unet.training_step(batch, 0))
-    print(unet.validation_step(batch, 0))
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {"scheduler": scheduler},
+        }

@@ -1,10 +1,5 @@
-from pathlib import Path
-from multiprocessing import Pool
-import argparse
-
 import numpy as np
 from scipy.signal import convolve2d
-import tifffile
 
 
 def simulate_heat_diffusion(indices, heat_center):
@@ -34,12 +29,10 @@ def normalize_gradients(gradients):
     gradients[norms != 0] /= norms[norms != 0, np.newaxis]
 
 
-def compute_gradient_mask(mask_path):
-    mask = tifffile.imread(mask_path)
-    print(f"running {mask_path.name}")
+def compute_flow(mask):
     ids = np.unique(mask)
     image_height, image_width = mask.shape
-    mask_gradients = np.zeros((image_height, image_width, 2))
+    flow = np.zeros((image_height, image_width, 2))
 
     for id in ids[ids != 0]:
         indices = np.argwhere(mask == id)
@@ -49,34 +42,11 @@ def compute_gradient_mask(mask_path):
 
         result = simulate_heat_diffusion(indices, center)
         if result is None:
-            print(f"{mask_path.name}: skipping ID {id} not large enough")
             continue
         gradients, heat_indices = result
         normalize_gradients(gradients)
 
-        mask_gradients[indices[:, 0], indices[:, 1]] = gradients[
+        flow[indices[:, 0], indices[:, 1]] = gradients[
             heat_indices[:, 0], heat_indices[:, 1]
         ]
-    return mask_gradients
-
-
-def compute_gradient_masks(mask_path):
-    gradients_path = (
-        mask_path.parent
-        / f"../{mask_path.parent.name.split('_')[0]}_flow/{mask_path.stem}_flow.tif"
-    )
-    if gradients_path.exists():
-        print(f"skipping existing {mask_path.name}")
-        return
-
-    mask_gradients = compute_gradient_mask(mask_path)
-    tifffile.imwrite(gradients_path, mask_gradients, compression="lzw")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--root_dir", type=Path, required=True)
-    arguments = parser.parse_args()
-    mask_files = sorted(list(arguments.root_dir.glob(r"[abc]" + "_GT/man_*.tif")))
-    with Pool(15) as p:
-        p.map(compute_gradient_masks, mask_files)
+    return flow

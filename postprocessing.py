@@ -15,7 +15,7 @@ def apply_flow(flow, n_steps=200):
         .reshape(image_height, image_width, 2)
         .unsqueeze(0)
         .repeat(batch_size, 1, 1, 1)
-    ).float()
+    ).double()
 
     positions /= (
         torch.tensor([image_height, image_width]).double().unsqueeze(0).unsqueeze(0)
