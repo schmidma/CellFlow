@@ -71,7 +71,7 @@ class CellDataset(Dataset):
 
         is_foreground = segmentation != 0
 
-        return image, is_foreground, None
+        return image, is_foreground, torch.tensor([])
 
     def __len__(self):
         return len(self.image_files)
