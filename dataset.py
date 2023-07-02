@@ -61,17 +61,17 @@ class CellDataset(Dataset):
         image = transformed["image"]
         segmentation = transformed["mask"]
 
-        flow = compute_flow(segmentation)
+        # flow = compute_flow(segmentation)
 
         # TODO: this is not very pretty
         transformed = ToTensorV2()(image=image, mask=segmentation)
         image = transformed["image"]
         segmentation = transformed["mask"]
-        flow = ToTensorV2()(image=flow)["image"]
+        # flow = ToTensorV2()(image=flow)["image"]
 
         is_foreground = segmentation != 0
 
-        return image, is_foreground, flow
+        return image, is_foreground, None
 
     def __len__(self):
         return len(self.image_files)
