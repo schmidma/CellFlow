@@ -5,7 +5,8 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import convolve2d
 import tifffile
-from tqdm.contrib.concurrent import process_map
+#from tqdm.contrib.concurrent import process_map
+from multiprocessing import Pool
 
 
 def simulate_heat_diffusion(indices, heat_center):
@@ -73,10 +74,12 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     data_root = arguments.data_root
     segmentation_files = list(data_root.glob("*_GT/SEG/*.tif"))
-    process_map(
-        process_image,
-        segmentation_files,
-        max_workers=arguments.num_workers,
-        total=len(segmentation_files),
-        chunksize=1,
-    )
+    # process_map(
+    #     process_image,
+    #     segmentation_files,
+    #     max_workers=arguments.num_workers,
+    #     total=len(segmentation_files),
+    #     chunksize=1,
+    # )
+    with Pool(arguments.num_workers) as p:
+        p.map(process_image, segmentation_files)
