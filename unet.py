@@ -115,9 +115,9 @@ class UNet(lightning.LightningModule):
         self.log("validation/iou", iou, prog_bar=True, sync_dist=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
-        image, _, _, filenames = batch
+        image, _, _ = batch
         prediction = self(image)
-        return prediction, filenames
+        return prediction
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)

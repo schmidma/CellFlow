@@ -32,17 +32,11 @@ if __name__ == "__main__":
     parser.add_argument("--pred_dir", type=Path, required=True)
 
     arguments = parser.parse_args()
-    model = UNet.load_from_checkpoint(arguments.from_checkpoint)
-    data = CellDataModule(root_dir=arguments.root_dir)
-    trainer = lightning.Trainer(accelerator="gpu", devices=4)
+    model = UNet.load_from_checkpoint(arguments.from_checkpoint, map_location="cpu")
+    data = CellDataModule(root_dir=arguments.root_dir, batch_size=1, num_workers=0)
+    trainer = lightning.Trainer(accelerator="cpu", devices=1)
 
     with torch.no_grad():
         predictions = trainer.predict(model, data)
-        for prediction_batch, filename_batch in predictions:
+        for prediction_batch in predictions:
             instances = gradients_to_instances(prediction_batch.detach())
-            resize = albumentations.Resize(256, 256, interpolation=cv2.INTER_NEAREST)
-            for instance, filename in zip(instances, filename_batch):
-                instance = resize(image=instance.numpy())["image"]
-                save_path = arguments.pred_dir / filename
-                os.makedirs(save_path.parent, exist_ok=True)
-                tifffile.imwrite(save_path, instance, compression="lzw")
