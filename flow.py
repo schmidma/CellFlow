@@ -63,7 +63,11 @@ def process_image(image_path):
     output_directory = image_path.parent / "../FLOW/"
     os.makedirs(output_directory, exist_ok=True)
     image_name = image_path.stem.split("_")[1]
-    tifffile.imwrite(output_directory / f"flow_{image_name}.tif", flow)
+    tifffile.imwrite(
+        output_directory / f"flow_{image_name}.tif",
+        flow,
+        compression="zlib",
+    )
 
 
 if __name__ == "__main__":
