@@ -9,9 +9,8 @@ def apply_flow(flow, n_steps=200):
     # positions in (batch_size, image_height, image_width, 2)
     positions = (
         torch.cartesian_prod(
-            torch.arange(image_height),
-            torch.arange(image_width),
-            device=device,
+            torch.arange(image_height, device=device),
+            torch.arange(image_width, device=device),
         )
         .reshape(image_height, image_width, 2)
         .unsqueeze(0)
