@@ -30,12 +30,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", type=Path, required=True)
     parser.add_argument("--from_checkpoint", type=Path, required=True)
-    parser.add_argument("--pred_dir", type=Path, required=True)
 
     arguments = parser.parse_args()
-    model = UNet.load_from_checkpoint(arguments.from_checkpoint, map_location="cpu")
-    data = CellDataModule(root_dir=arguments.root_dir, batch_size=1, num_workers=0)
-    trainer = lightning.Trainer(accelerator="cpu", devices=1)
+    model = UNet.load_from_checkpoint(arguments.from_checkpoint)
+    data = CellDataModule(root_dir=arguments.root_dir)
+    trainer = lightning.Trainer(accelerator="gpu", devices=2)
 
     with torch.no_grad():
         predictions = trainer.predict(model, data)
