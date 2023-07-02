@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+import tqdm
 import torch
 import albumentations
 import lightning
@@ -38,5 +39,5 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         predictions = trainer.predict(model, data)
-        for prediction_batch in predictions:
+        for prediction_batch in tqdm.tqdm(predictions):
             instances = gradients_to_instances(prediction_batch.detach())
