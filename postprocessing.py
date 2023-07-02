@@ -1,16 +1,17 @@
-
 import torch
+
 
 def apply_flow(flow, n_steps=200):
     batch_size = flow.shape[0]
     image_height = flow.shape[2]
     image_width = flow.shape[3]
-
+    device = flow.device
     # positions in (batch_size, image_height, image_width, 2)
     positions = (
         torch.cartesian_prod(
             torch.arange(image_height),
             torch.arange(image_width),
+            device=device,
         )
         .reshape(image_height, image_width, 2)
         .unsqueeze(0)
@@ -18,11 +19,16 @@ def apply_flow(flow, n_steps=200):
     ).double()
 
     positions /= (
-        torch.tensor([image_height, image_width]).double().unsqueeze(0).unsqueeze(0)
+        torch.tensor([image_height, image_width], device=device)
+        .double()
+        .unsqueeze(0)
+        .unsqueeze(0)
     )
     positions = positions * 2 - 1
 
-    flow *= 2.0 / torch.tensor([image_height, image_width]).unsqueeze(-1).unsqueeze(-1)
+    flow *= 2.0 / torch.tensor([image_height, image_width], device=device).unsqueeze(
+        -1
+    ).unsqueeze(-1)
 
     positions = positions[:, :, :, [1, 0]]
     flow = flow[:, [1, 0], :, :]
@@ -43,15 +49,22 @@ def apply_flow(flow, n_steps=200):
 
     return positions
 
+
 def cluster(positions, is_foreground, max_threshold=10):
     batch_size, image_height, image_width, _ = positions.shape
-
-    ids = torch.zeros((batch_size, image_height, image_width), dtype=torch.long)
+    device = positions.device
+    ids = torch.zeros(
+        (batch_size, image_height, image_width), dtype=torch.long, device=device
+    )
     for i in range(batch_size):
         masked_points = positions[i][is_foreground[i]]
         reshaped_positions = positions[i].reshape(-1, 2)
-        bin_y = torch.arange(-0.5, image_height + 0.5, 1, dtype=torch.float)
-        bin_x = torch.arange(-0.5, image_width + 0.5, 1, dtype=torch.float)
+        bin_y = torch.arange(
+            -0.5, image_height + 0.5, 1, dtype=torch.float, device=device
+        )
+        bin_x = torch.arange(
+            -0.5, image_width + 0.5, 1, dtype=torch.float, device=device
+        )
         hist, _ = torch.histogramdd(reshaped_positions, (bin_y, bin_x))
         max_hist = hist > max_threshold
         max_indices = max_hist.nonzero()
