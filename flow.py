@@ -1,5 +1,11 @@
+import argparse
+import os
+from pathlib import Path
+
 import numpy as np
 from scipy.signal import convolve2d
+import tifffile
+from tqdm.contrib.concurrent import process_map
 
 
 def simulate_heat_diffusion(indices, heat_center):
@@ -14,9 +20,9 @@ def simulate_heat_diffusion(indices, heat_center):
     for _ in range(N):
         heat_map[heat_source[0], heat_source[1]] += 1.0
         next = convolve2d(heat_map, np.ones((3, 3)) / 9, mode="same")
-        heat_map[heat_indices[:, 0], heat_indices[:, 1]] = next[
-            heat_indices[:, 0], heat_indices[:, 1]
-        ]
+        heat_map[heat_indices[:, 0],
+                 heat_indices[:, 1]] = next[heat_indices[:, 0],
+                                            heat_indices[:, 1]]
 
     gradients = np.gradient(heat_map)
     dy = gradients[0]
@@ -37,7 +43,7 @@ def compute_flow(mask):
     for id in ids[ids != 0]:
         indices = np.argwhere(mask == id)
         median = np.median(indices, axis=0)
-        distances = np.sum((indices - median) ** 2, axis=1)
+        distances = np.sum((indices - median)**2, axis=1)
         center = indices[np.argmin(distances)]
 
         result = simulate_heat_diffusion(indices, center)
@@ -46,7 +52,31 @@ def compute_flow(mask):
         gradients, heat_indices = result
         normalize_gradients(gradients)
 
-        flow[indices[:, 0], indices[:, 1]] = gradients[
-            heat_indices[:, 0], heat_indices[:, 1]
-        ]
+        flow[indices[:, 0], indices[:, 1]] = gradients[heat_indices[:, 0],
+                                                       heat_indices[:, 1]]
     return flow
+
+
+def process_image(image_path):
+    segmentation = tifffile.imread(image_path)
+    flow = compute_flow(segmentation)
+    output_directory = image_path.parent / "../FLOW/"
+    os.makedirs(output_directory, exist_ok=True)
+    image_name = image_path.stem.split("_")[1]
+    tifffile.imwrite(output_directory / f"flow_{image_name}.tif", flow)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-root", type=Path, required=True)
+    parser.add_argument("--num-workers", type=int, default=os.cpu_count())
+    arguments = parser.parse_args()
+    data_root = arguments.data_root
+    segmentation_files = list(data_root.glob("*_GT/SEG/*.tif"))
+    process_map(
+        process_image,
+        segmentation_files,
+        max_workers=arguments.num_workers,
+        total=len(segmentation_files),
+        chunksize=1,
+    )
