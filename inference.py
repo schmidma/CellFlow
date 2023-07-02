@@ -39,4 +39,4 @@ if __name__ == "__main__":
     with torch.no_grad():
         predictions = trainer.predict(model, data)
         for prediction_batch in tqdm.tqdm(predictions):
-            instances = gradients_to_instances(prediction_batch.detach())
+            instances = gradients_to_instances(prediction_batch)
