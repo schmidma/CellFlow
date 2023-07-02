@@ -5,6 +5,9 @@ import lightning
 import torch.nn.functional as F
 from torchmetrics.classification import JaccardIndex as IoU
 
+from postprocessing import apply_flow, cluster
+from torch.nn.functional import sigmoid
+
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -114,10 +117,21 @@ class UNet(lightning.LightningModule):
         self.log("validation/loss", total_loss, prog_bar=True, sync_dist=True)
         self.log("validation/iou", iou, prog_bar=True, sync_dist=True)
 
+    def _gradients_to_instances(self, prediction, class_threshold=0.5):
+        # batch, channels, height, width
+        logits = prediction[:, 0, :, :]
+        flow = prediction[:, [1, 2], :, :]
+        positions = apply_flow(flow)
+        probability = sigmoid(logits)
+        mask = probability > class_threshold
+        ids = cluster(positions, mask)
+        return ids
+
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         image, _, _ = batch
         prediction = self(image)
-        return prediction
+        instances = self._gradients_to_instances(prediction)
+        return instances
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
