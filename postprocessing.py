@@ -42,7 +42,10 @@ def apply_flow(flow, n_steps=200):
 
     positions = (positions + 1) / 2
     positions *= (
-        torch.tensor([image_height, image_width]).float().unsqueeze(0).unsqueeze(0)
+        torch.tensor([image_height, image_width], device=device)
+        .float()
+        .unsqueeze(0)
+        .unsqueeze(0)
     )
 
     return positions
