@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 import lightning
 
-from dataset import CellDataModule
+from dataset import CellData
 from unet import UNet
 
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     arguments = parser.parse_args()
     model = UNet.load_from_checkpoint(arguments.from_checkpoint)
-    data = CellDataModule(root_dir=arguments.root_dir)
+    data = CellData(root_dir=arguments.root_dir)
     trainer = lightning.Trainer(accelerator="gpu", devices=2)
 
     with torch.no_grad():

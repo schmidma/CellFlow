@@ -1,6 +1,6 @@
 tifffile
 imagecodecs
-lightning
+lightning[extra]
 torch
 torchvision
 albumentations

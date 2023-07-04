@@ -20,9 +20,9 @@ def simulate_heat_diffusion(indices, heat_center):
     for _ in range(N):
         heat_map[heat_source[0], heat_source[1]] += 1.0
         next = convolve2d(heat_map, np.ones((3, 3)) / 9, mode="same")
-        heat_map[heat_indices[:, 0],
-                 heat_indices[:, 1]] = next[heat_indices[:, 0],
-                                            heat_indices[:, 1]]
+        heat_map[heat_indices[:, 0], heat_indices[:, 1]] = next[
+            heat_indices[:, 0], heat_indices[:, 1]
+        ]
 
     gradients = np.gradient(heat_map)
     dy = gradients[0]
@@ -43,7 +43,7 @@ def compute_flow(mask):
     for id in ids[ids != 0]:
         indices = np.argwhere(mask == id)
         median = np.median(indices, axis=0)
-        distances = np.sum((indices - median)**2, axis=1)
+        distances = np.sum((indices - median) ** 2, axis=1)
         center = indices[np.argmin(distances)]
 
         result = simulate_heat_diffusion(indices, center)
@@ -52,22 +52,29 @@ def compute_flow(mask):
         gradients, heat_indices = result
         normalize_gradients(gradients)
 
-        flow[indices[:, 0], indices[:, 1]] = gradients[heat_indices[:, 0],
-                                                       heat_indices[:, 1]]
+        flow[indices[:, 0], indices[:, 1]] = gradients[
+            heat_indices[:, 0], heat_indices[:, 1]
+        ]
     return flow
 
 
-def process_image(image_path):
+def process_image(image_path, force_recompute=False):
+    output_directory = image_path.parent / "../FLOW/"
+    image_name = image_path.stem.split("_")[1]
+    flow_path = output_directory / f"flow_{image_name}.tif"
+    if flow_path.exists() and not force_recompute:
+        return
+
     segmentation = tifffile.imread(image_path)
     flow = compute_flow(segmentation)
-    output_directory = image_path.parent / "../FLOW/"
+
     os.makedirs(output_directory, exist_ok=True)
-    image_name = image_path.stem.split("_")[1]
     tifffile.imwrite(
-        output_directory / f"flow_{image_name}.tif",
+        flow_path,
         flow,
         compression="zlib",
     )
+    return flow_path
 
 
 if __name__ == "__main__":

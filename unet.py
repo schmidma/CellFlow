@@ -87,7 +87,8 @@ class UNet(lightning.LightningModule):
         return out
 
     def _shared_evaluation_step(self, batch):
-        images, target_mask, target_flow = batch
+        images, target_segmentation, target_flow = batch
+        target_mask = target_segmentation != 0
         assert target_flow.shape[1] == 2
 
         outputs = self(images)
@@ -111,7 +112,8 @@ class UNet(lightning.LightningModule):
         return total_loss
 
     def validation_step(self, batch, batch_idx):
-        _, target_masks, _ = batch
+        _, target_segmentation, _ = batch
+        target_masks = target_segmentation != 0
         total_loss, predicted_object_probabilities = self._shared_evaluation_step(batch)
         iou = self.iou(predicted_object_probabilities > 0.5, target_masks)
         self.log("validation/loss", total_loss, prog_bar=True, sync_dist=True)
