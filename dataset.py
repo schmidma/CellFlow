@@ -179,19 +179,35 @@ class CellData(lightning.LightningDataModule):
 
         return image, segmentation, flow
 
+    def prepare_data(self):
+        ObiWanMicrobi(
+            self.root_dir, split="train", download=True, max_workers=self.num_workers
+        )
+        ObiWanMicrobi(
+            self.root_dir,
+            split="validation",
+            download=True,
+            max_workers=self.num_workers,
+        )
+        ObiWanMicrobi(
+            self.root_dir, split="test", download=True, max_workers=self.num_workers
+        )
+
     def setup(self, stage=None):
         if stage == "fit" or stage == "validate" or stage is None:
             self.train_data = ObiWanMicrobi(
                 root_dir=self.root_dir,
                 split="train",
-                download=True,
+                download=False,
+                precompute_flow=True,
                 max_workers=self.num_workers,
                 transform=self._train_transform,
             )
             self.validation_data = ObiWanMicrobi(
                 root_dir=self.root_dir,
                 split="validation",
-                download=True,
+                download=False,
+                precompute_flow=True,
                 max_workers=self.num_workers,
                 transform=self._test_transform,
             )
@@ -199,7 +215,8 @@ class CellData(lightning.LightningDataModule):
             self.test_data = ObiWanMicrobi(
                 root_dir=self.root_dir,
                 split="test",
-                download=True,
+                download=False,
+                precompute_flow=True,
                 max_workers=self.num_workers,
                 transform=self._test_transform,
             )
