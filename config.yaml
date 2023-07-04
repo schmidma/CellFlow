@@ -1,0 +1,25 @@
+fit:
+  trainer:
+    limit_train_batches: 10
+    limit_val_batches: 5
+    logger:
+      class_path: lightning.pytorch.loggers.TensorBoardLogger
+      init_args:
+        save_dir: ./
+        name: logs
+        default_hp_metric: false
+    callbacks:
+      - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+        init_args:
+          monitor: validation/iou
+          mode: max
+          save_last: true
+  model:
+    in_channels: 1
+    out_channels: 3
+    init_features: 32
+    learning_rate: 0.001
+  data:
+    root_dir: ./data/
+    batch_size: 2
+    num_workers: 12
