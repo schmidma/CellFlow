@@ -119,7 +119,7 @@ class ObiWanMicrobi(Dataset):
 
 
 class CellData(lightning.LightningDataModule):
-    def __init__(self, root_dir, batch_size=16, num_workers=32):
+    def __init__(self, root_dir, batch_size=8, num_workers=os.cpu_count() or 1):
         super().__init__()
         self.root_dir = root_dir
         self.batch_size = batch_size
